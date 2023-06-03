@@ -5,7 +5,7 @@ import time
 import numpy as np
 import pandas as pd
 import xlrd
-from config.config import Config
+from config.config import Config, Path
 from xlutils.copy import copy
 
 
@@ -67,15 +67,14 @@ def part_tags(path: str, tag_num: int):
     return dic_data, max_timestamp
 
 
-def together_tags(path: str, dic_data: dict, array: list):
+def together_tags(dic_data: dict, array: list):
     """
     将所有标签数据写入一个任务表sheet中，用于查看数据变化及插值
-    :param path: 目标任务表路径
     :param dic_data: 以EPC为主键，DataFrame为值的字典
     :param array: 标签阵列（一维）
     :return: None
     """
-    book = xlrd.open_workbook(path)
+    book = xlrd.open_workbook(Path.PATH_TOGETHER)
     book_prepare = copy(book)
     sheet_name = ['RSSI_手势', 'Phase_手势']
     for sheetnames in sheet_name:
@@ -93,8 +92,8 @@ def together_tags(path: str, dic_data: dict, array: list):
                 data = np.unwrap(dic_data[array[j]].iloc[:, 3].to_numpy())
             for i in range(1, len(data) + 1):
                 sheet.write(i, j, str(data[i - 1]))
-    print("原始数据写入(手势状态)已完成")
-    book_prepare.save(path)
+
+    book_prepare.save(Path.PATH_TOGETHER)
 
 
 def trans_to_numpy(dic_data: dict, array: list):
@@ -127,5 +126,5 @@ def trans_to_numpy(dic_data: dict, array: list):
                 res_phase[i][j][k] = data_phase[k]
                 res_time[i][j][k] = data_time[k]
             index += 1
-    print("rssi、phase提取完成")
+
     return res_rssi, res_phase, res_time

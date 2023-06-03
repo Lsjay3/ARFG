@@ -26,6 +26,17 @@ class Config:
     FILTER_WINDOWS: int = 15
     BIO_RESOLUTION: int = 3
 
+    GESTURE_DICT: dict = {
+        "a": 1,
+        "b": 2,
+        "c": 3,
+        "d": 4,
+        "e": 5,
+        "i": 6,
+        "swipe_down_to_up": 7,
+        "swipe_l_to_r": 8
+    }
+
 
 class Path:
 
@@ -45,3 +56,6 @@ class Path:
     # 数据聚合表路径
     PATH_TOGETHER: str = r'E:\笨比J\RFID\Impinj R420\实验数据\二十五标签\二十五标签_together.xls'
     PATH_PREPROCESSING: str = r'E:\笨比J\RFID\Impinj R420\实验数据\二十五标签\数据预处理.xls'
+
+    # 训练数据存储路径
+    PATH_TRAIN: str = r'E:\笨比J\RFID\Impinj R420\Data\Train\train.csv'

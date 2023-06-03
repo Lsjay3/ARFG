@@ -96,13 +96,13 @@ def segment_gesture(phase_move: numpy.ndarray):
     peaks, _ = find_peaks(var_max, height=height)
     if len(peaks) <= 1:
         return 0, 0
-    print("开始，结束：", peaks[0], peaks[-1])
-    with open('../v.csv', 'w') as file:
-        csv.writer(file)
-    data = pd.DataFrame(var_max)
-    data.to_csv('v.csv')
+    # print("开始，结束：", peaks[0], peaks[-1])
+    # with open('../v.csv', 'w') as file:
+    #     csv.writer(file)
+    # data = pd.DataFrame(var_max)
+    # data.to_csv('v.csv')
     plt.plot(x, var_max, lw=4, ls='-', c='k', alpha=0.5)
-    plt.show()
+    # plt.show()
     return peaks[0], peaks[-1]
 
 
@@ -118,7 +118,13 @@ def bilinear_interpolation(feature_map: numpy.ndarray, bio_resolution: int):
     else:
         orig_h, orig_w = feature_map.shape
         channels = 1
-    dst = np.zeros((orig_h * bio_resolution, orig_w * bio_resolution, channels), dtype=np.float64)
+    dst = np.zeros(
+        (orig_h *
+         bio_resolution,
+         orig_w *
+         bio_resolution,
+         channels),
+        dtype=np.float64)
     x = linspace(0, orig_w, orig_w, endpoint=False)
     y = linspace(0, orig_h, orig_h, endpoint=False)
     xx = linspace(0, orig_w, orig_w * bio_resolution, endpoint=False)
@@ -148,11 +154,13 @@ def compute_signal(rssi_static, filter_unwrap_phase_static,
     sin_phase_move = math.sin(filter_unwrap_phase_move)
 
     S_actual = pow((rssi_move_value * cos_phase_move) - (rssi_static_value * cos_phase_static), 2) \
-        + pow((rssi_move_value * sin_phase_move) - (rssi_static_value * sin_phase_static), 2)
+        + pow((rssi_move_value * sin_phase_move) -
+              (rssi_static_value * sin_phase_static), 2)
     return S_actual
 
 
-def compute_reflect_signal(rssi_move: numpy.ndarray, phase_move: numpy.ndarray):
+def compute_reflect_signal(rssi_move: numpy.ndarray,
+                           phase_move: numpy.ndarray):
     """
     计算实际反射信号矩阵
     :param rssi_move: 预处理结束的RSSI值
@@ -170,15 +178,16 @@ def compute_reflect_signal(rssi_move: numpy.ndarray, phase_move: numpy.ndarray):
             phase_static = mean(phase_move[i][j][0:10])
             for c in range(channels):
                 # 坐标（i + 1, j + 1）在 c 时刻的反射信号强度
-                S_actual[i][j][c] = compute_signal(rssi_static=0, 
-                                                   filter_unwrap_phase_static=phase_static, 
-                                                   rssi_move=rssi_move[i][j][c] - rssi_static, 
+                S_actual[i][j][c] = compute_signal(rssi_static=0,
+                                                   filter_unwrap_phase_static=phase_static,
+                                                   rssi_move=rssi_move[i][j][c] -
+                                                   rssi_static,
                                                    filter_unwrap_phase_move=phase_move[i][j][c])
-    print("反射信号计算完成")
     return S_actual
 
 
-def compute_likelihood(actual_signal_array: numpy.ndarray, theory_signal_array: numpy.ndarray):
+def compute_likelihood(actual_signal_array: numpy.ndarray,
+                       theory_signal_array: numpy.ndarray):
     """
     根据实际信号矩阵和理论信号矩阵计算最大似然相似矩阵，用于估计每个时刻手指在标签阵列的坐标
     :param actual_signal_array: 实际信号矩阵 (height * width * channels)
@@ -211,11 +220,12 @@ def compute_likelihood(actual_signal_array: numpy.ndarray, theory_signal_array: 
         pearson_c[c] = pearson.numpy()
         I_x_y = F.softmax(pearson, dim=0)
         like_hood[c] = I_x_y.numpy()
-    print("似然估计量计算完成")
+
     return like_hood, pearson_c
 
 
-def linear_interpolation(data: numpy.ndarray, res_time: numpy.ndarray, maxtime: float):
+def linear_interpolation(
+        data: numpy.ndarray, res_time: numpy.ndarray, maxtime: float):
     """
     线性插值 插值时间间隔为Config.LINEAR_INTERPOLATION_TIME
     :param data: 需要插值的原始信号（RSSI or Phase）
@@ -231,7 +241,8 @@ def linear_interpolation(data: numpy.ndarray, res_time: numpy.ndarray, maxtime: 
     return y_interp
 
 
-def signal_preprocess(data: numpy.ndarray, res_time: numpy.ndarray, max_time: float):
+def signal_preprocess(data: numpy.ndarray,
+                      res_time: numpy.ndarray, max_time: float):
     """
     数据预处理：一维线性插值（时间上）、相位解缠绕、平滑滤波
     :param data: 原始信号（RSSI、Phase）值组成的numpy
@@ -270,7 +281,7 @@ def signal_preprocess(data: numpy.ndarray, res_time: numpy.ndarray, max_time: fl
                 sheet.write(j + 1, i, data)
             i += 1
     book.save(Path.PATH_PREPROCESSING)
-    print("数据预处理完成")
+
     return res
 
 
@@ -287,7 +298,11 @@ def computer_theory_signal():
     for i in range(Config.HEIGHT):
         for j in range(Config.WIDTH):
             coord.append((i, j))
-    there_signal = np.zeros((Config.HEIGHT, Config.WIDTH, channels), dtype=np.float64)
+    there_signal = np.zeros(
+        (Config.HEIGHT,
+         Config.WIDTH,
+         channels),
+        dtype=np.float64)
     num = 0
     for i in range(Config.HEIGHT):
         for j in range(Config.WIDTH):
@@ -295,7 +310,7 @@ def computer_theory_signal():
                 there_signal[i][j][m] = 1 / pow(pow(coord[num][0] - coord[m][0], 2) +
                                                 pow(coord[num][1] - coord[m][1], 2) + 4, 2)
             num += 1
-    print("理论信号计算完成")
+
     return there_signal
 
 
@@ -387,7 +402,8 @@ def pant_img(like_hood: numpy.ndarray, start: int, save_tuple: tuple):
         plt.matshow(feature_map[:, :, channel], cmap=plt.get_cmap(
             'Blues'), alpha=0.5)
         plt.title(start + channel)
-        plt.savefig(Path.PATH_IMG_FEATURE + 'img' + str(start + channel) + '.jpg')
+        plt.savefig(Path.PATH_IMG_FEATURE + 'img' +
+                    str(start + channel) + '.jpg')
         plt.close()
     pant_trace(
         coord_w=coord_w,
@@ -494,3 +510,21 @@ def del_file(path_data):
             os.remove(file_data)
         else:
             del_file(file_data)
+
+
+def data_to_csv(data: list, target: str):
+    """
+    将预处理后的数据保存成csv，作为train/test数据
+    :param data: 预处理后的数据
+    :param target: 所属手势
+    :return: None
+    """
+    if os.path.exists(Path.PATH_TRAIN):
+        df_old = pd.read_csv(Path.PATH_TRAIN)
+    else:
+        df_old = pd.DataFrame(columns=['feature', 'target'])
+    target_list = [target] * len(data)
+    df_new = pd.DataFrame(data, columns=['feature'])
+    df_new['target'] = target_list
+    df = pd.concat([df_old, df_new], ignore_index=True)
+    df.to_csv(Path.PATH_TRAIN, index=False)
