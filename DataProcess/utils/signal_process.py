@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy
 import numpy as np
 import pandas as pd
+import ruptures as rpt
 import torch
 import torch.nn.functional as F
 import xlwt
@@ -74,58 +75,37 @@ def standardization(data: numpy.ndarray):
     return (data - mu) / sigma
 
 
-def compute_variance(phase_move):
+def segment_gesture(phase_move: numpy.ndarray):
     """
-    根据窗口大小，计算方差流
-    :param phase_move: 预处理后的相位值
-    :return: 方差流list
+    基于贝叶斯变点检测的手势分割方法
+    :param phase_move: 预处理完成的phase值
+    :return:
     """
-    h, w, channel = phase_move.shape
-    normalized_data = normalization(phase_move.reshape(-1, channel))
-    return variance_stream(normalized_data, windows=channel//30).reshape(h, w, -1)
+    num_labels = phase_move.shape[0] * phase_move.shape[1]
+    # 重塑数据为 (num_labels, t) 的数组
+    reshaped_data = phase_move.reshape(num_labels, -1)
 
+    start_points = []
+    end_points = []
 
-def find_peaks_in_variance(variance_list):
-    """
-    在方差流list中查询峰值
-    :param variance_list: 预处理结束的相位值
-    :return: 手势开始与结束的时间段
-    """
-    var_max = variance_list.max(axis=0)
-    height = var_max.mean()
-    return find_peaks(var_max, height=height)[0]
+    for label_data in reshaped_data:
+        # 选择模型
+        algo = rpt.Pelt(model="rbf").fit(label_data)
+        # 选择最佳变点
+        result = algo.predict(pen=10)
 
+        # 添加第一个变点到 start_points
+        if len(result) >= 1:
+            start_points.append(result[0])
+        # 添加倒数第二个变点到 end_points
+        if len(result) >= 2:
+            end_points.append(result[-2])
 
-def segment_gesture(phase_move):
-    """
-    分割出存在手势的时间段
-    :param phase_move: 预处理结束的相位值
-    :return: 手势开始与结束的时间段
-    """
-    h, w, channel = phase_move.shape
-    variance_list = list()
-    for i in range(h):
-        for j in range(w):
-            x = normalization(data=phase_move[i][j])
-            v = variance_stream(y=x, windows=int(channel / 30))
-            variance_list.append(v)
-    variance_list = np.array(variance_list)
-    var_max = list()
-    for i in range(len(variance_list[0])):
-        var_max.append(max(variance_list[:, i]))
-    x = list(np.arange(1, len(variance_list[0]) + 1))
-    height = mean(var_max)
-    peaks, _ = find_peaks(var_max, height=height)
-    if len(peaks) <= 1:
-        return 0, 0
-    # print("开始，结束：", peaks[0], peaks[-1])
-    # with open('../v.csv', 'w') as file:
-    #     csv.writer(file)
-    # data = pd.DataFrame(var_max)
-    # data.to_csv('v.csv')
-    plt.plot(x, var_max, lw=4, ls='-', c='k', alpha=0.5)
-    # plt.show()
-    return peaks[0], peaks[-1]
+    # 计算平均值
+    start = int(np.mean(start_points)) if start_points else 0
+    end = int(np.mean(end_points)) if end_points else 1
+
+    return start, end
 
 
 def bilinear_interpolation(feature_map: numpy.ndarray, bio_resolution: int):

@@ -5,7 +5,7 @@ import numpy
 from config.config import Config, Path
 from utils.signal_process import (compute_likelihood, signal_preprocess,
                                   segment_gesture, compute_reflect_signal,
-                                  computer_theory_signal)
+                                  computer_theory_signal, seg)
 from utils.signal_prepare import trans_to_numpy, part_tags
 
 
@@ -68,7 +68,7 @@ class ProcessBase:
                 rssi_move=rssi_move, phase_move=phase_move)
             print("反射信号计算完成")
             # # 分割出 存在手势的时间段
-            start, end = segment_gesture(phase_move=phase_move)
+            start, end = seg(phase_move=phase_move)
             print(f"开始：{start}, 结束：{end}")
 
             # 计算手指在每个坐标上的理论反射信号, There_signal[0][0] 代表手指在坐标(0,0)的理论标签矩阵
