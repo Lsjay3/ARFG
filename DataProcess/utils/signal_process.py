@@ -3,10 +3,8 @@ import csv
 import math
 import os
 
-import numpy
-
-from utils.img_process import image_compose
 import matplotlib.pyplot as plt
+import numpy
 import numpy as np
 import pandas as pd
 import torch
@@ -18,6 +16,8 @@ from pykalman import KalmanFilter
 from scipy import interpolate
 from scipy.signal import find_peaks, savgol_filter
 from scipy.stats import pearsonr
+from sklearn.model_selection import train_test_split
+from utils.img_process import image_compose
 
 filtered_state_means0 = None
 filtered_state_covariances0 = None
@@ -74,10 +74,32 @@ def standardization(data: numpy.ndarray):
     return (data - mu) / sigma
 
 
-def segment_gesture(phase_move: numpy.ndarray):
+def compute_variance(phase_move):
+    """
+    根据窗口大小，计算方差流
+    :param phase_move: 预处理后的相位值
+    :return: 方差流list
+    """
+    h, w, channel = phase_move.shape
+    normalized_data = normalization(phase_move.reshape(-1, channel))
+    return variance_stream(normalized_data, windows=channel//30).reshape(h, w, -1)
+
+
+def find_peaks_in_variance(variance_list):
+    """
+    在方差流list中查询峰值
+    :param variance_list: 预处理结束的相位值
+    :return: 手势开始与结束的时间段
+    """
+    var_max = variance_list.max(axis=0)
+    height = var_max.mean()
+    return find_peaks(var_max, height=height)[0]
+
+
+def segment_gesture(phase_move):
     """
     分割出存在手势的时间段
-    :param phase_move: 预处理结束的RSSI值
+    :param phase_move: 预处理结束的相位值
     :return: 手势开始与结束的时间段
     """
     h, w, channel = phase_move.shape
@@ -512,19 +534,48 @@ def del_file(path_data):
             del_file(file_data)
 
 
-def data_to_csv(data: list, target: str):
+def data_to_csv(data: list, target: int):
     """
     将预处理后的数据保存成csv，作为train/test数据
     :param data: 预处理后的数据
-    :param target: 所属手势
+    :param target: 手势
     :return: None
     """
-    if os.path.exists(Path.PATH_TRAIN):
-        df_old = pd.read_csv(Path.PATH_TRAIN)
+    if os.path.exists(Path.PATH_DATA):
+        df_old = pd.read_csv(Path.PATH_DATA)
     else:
         df_old = pd.DataFrame(columns=['feature', 'target'])
     target_list = [target] * len(data)
-    df_new = pd.DataFrame(data, columns=['feature'])
-    df_new['target'] = target_list
+    df_new = pd.DataFrame(columns=['feature', 'target'])
+    for data, target in zip(data, target_list):
+        data_str = data.tolist()
+        df_new = df_new.append({'feature': data_str, 'target': target}, ignore_index=True)
     df = pd.concat([df_old, df_new], ignore_index=True)
-    df.to_csv(Path.PATH_TRAIN, index=False)
+    df.to_csv(Path.PATH_DATA, index=False)
+
+
+def split_train_test():
+    """
+    划分数据集为train and test
+    :return:
+    """
+    if os.path.exists(Path.PATH_DATA):
+        df = pd.read_csv(Path.PATH_DATA)
+    else:
+        raise NotADirectoryError
+    features = df.iloc[:, 0].values
+    target = df.iloc[:, -1].values
+
+    X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=Config.TEST_SIZE,
+                                                        random_state=Config.RANDOM_SEED)
+
+    # 创建训练集和测试集的DataFrame
+    train_df = pd.DataFrame(X_train, columns=df.columns[:-1])
+    train_df['target'] = y_train
+
+    test_df = pd.DataFrame(X_test, columns=df.columns[:-1])
+    test_df['target'] = y_test
+
+    # 将训练集和测试集保存为CSV文件
+    train_df.to_csv(Path.PATH_TRAIN, index=False)
+    test_df.to_csv(Path.PATH_TEST, index=False)

@@ -2,8 +2,7 @@ import os
 
 from config.config import Config, Path
 
-from router.process_arfg import ProcessARFG
-from router.process_arft import ProcessARFT
+from router.process_task import ProcessARFG, ProcessARFT
 
 if __name__ == '__main__':
 
@@ -20,6 +19,12 @@ if __name__ == '__main__':
         else:
             raise ValueError("无效的任务类型")
         task.process()
+
+    if model == "arft":
+        task = ProcessARFT(gesture='a')
+        task.train_test_split()
+
+
 
 
 

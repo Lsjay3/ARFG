@@ -10,7 +10,7 @@ from utils.signal_prepare import trans_to_numpy, part_tags
 
 
 class ProcessBase:
-    def __init__(self, gesture):
+    def __init__(self, gesture: str = 'a'):
         self.gesture = gesture
 
     def together_tags(self, dic_data: dict, array: str):
@@ -20,6 +20,9 @@ class ProcessBase:
         pass
 
     def data_to_csv(self, data: list, target: str):
+        pass
+
+    def train_test_split(self):
         pass
 
     def process(self):
@@ -66,6 +69,7 @@ class ProcessBase:
             print("反射信号计算完成")
             # # 分割出 存在手势的时间段
             start, end = segment_gesture(phase_move=phase_move)
+            print(f"开始：{start}, 结束：{end}")
 
             # 计算手指在每个坐标上的理论反射信号, There_signal[0][0] 代表手指在坐标(0,0)的理论标签矩阵
             theory_signal_array = computer_theory_signal()
